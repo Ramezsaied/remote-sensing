@@ -1,0 +1,56 @@
+// Author: Ramez Saeed
+// Title: NDWI of Safaga Coastal zone
+// Date: 2024
+// Description: Coastline detection of Safaga coactal zone using NDWI
+// Citation: Saeed, R. (2024). NDWI of Safaga Coastal zone. Google Earth Engine. https://code.earthengine.google.com/?scriptPath=users%2Framezsaied2014%2FGEE_COurse%3AFinal%20NDWI
+
+
+// Define your custom ROI as an ee.Geometry.Polygon
+var customROI = ee.Geometry.Polygon([
+  [33.90787423566817, 26.63029868348963],
+  [34.120391020336136, 26.63029868348963],
+  [34.120391020336136, 26.91076826144708],
+  [33.90787423566817, 26.91076826144708],
+  [33.90787423566817, 26.63029868348963]
+]);
+
+// Load Sentinel-2 data
+var startDate = '2021-01-01';
+var endDate = '2021-02-28'; // Adjust the date range as needed
+
+// Returns all the images between the start date and the end date
+// taken on the custom ROI
+var imageCollection = ee.ImageCollection('COPERNICUS/S2')
+  .filterBounds(customROI)
+  .filterDate(startDate, endDate)
+  .sort('CLOUDY_PIXEL_PERCENTAGE');
+
+// Check if there are valid images
+if (imageCollection.size().getInfo() > 0) {
+  var image1 = imageCollection.first();
+//  var image2 = imageCollection.sort('system:time_start').get(1);
+
+  // Visualize using RGB for the first image
+  var rgbParams = {bands: ['B4', 'B3', 'B2'], min: 0, max: 3000};
+  Map.addLayer(image1, rgbParams, 'Image 1');
+
+  // Calculate NDWI for both images using the B3 and B8 bands
+  var ndwi1 = image1.normalizedDifference(['B3', 'B8']).rename('NDWI_Image1');
+//  var ndwi2 = image2.normalizedDifference(['B3', 'B8']).rename('NDWI_Image2');
+
+  // Create NDWI mask for both images
+  var ndwiThreshold = 0.0;
+  var ndwiMask1 = ndwi1.gte(ndwiThreshold);
+//  var ndwiMask2 = ndwi2.gte(ndwiThreshold);
+
+  // Add NDWI and masks to the map
+  Map.addLayer(ndwi1, {min: -1, max: 1, palette: ['00FFFF', '0000FF']}, 'NDWI_Image1');
+//  Map.addLayer(ndwi2, {min: -1, max: 1, palette: ['00FFFF', '0000FF']}, 'NDWI_Image2');
+  Map.addLayer(ndwiMask1, {palette: ['white', 'blue']}, 'NDWI Mask Image1');
+//  Map.addLayer(ndwiMask2, {palette: ['white', 'blue']}, 'NDWI Mask Image2');
+
+  // Center the map on the ROI
+  Map.centerObject(customROI, 10);
+} else {
+  print("No valid images found for the specified date and ROI.");
+}
